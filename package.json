@@ -18,3 +18,7 @@
     "prisma": "^7.4.1"
   }
 }
+
+"scripts": {
+  "start": "node src/server.js"
+}
