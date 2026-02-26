@@ -18,6 +18,9 @@ app.use("/login", require("./routes/login"));
 
 app.use("/log", require("./routes/log"));
 
+app.use("/phish", require("./routes/phish"));
+
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
