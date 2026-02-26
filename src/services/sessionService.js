@@ -1,4 +1,4 @@
-const { prisma } = require("../server");
+const prisma = require("../prisma");
 const { generateNonce } = require("./badgeService");
 
 async function createSession(userId) {

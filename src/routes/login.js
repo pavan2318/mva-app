@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const { prisma } = require("../server");
+const prisma = require("../prisma");
 const { createSession } = require("../services/sessionService");
 const { deriveDynamicBadge } = require("../services/badgeService");
 
