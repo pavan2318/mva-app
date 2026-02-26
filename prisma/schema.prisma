@@ -4,22 +4,49 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+ url      = env("DATABASE_URL")
 }
 
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  passwordHash  String
-  loginMode     String
-  createdAt     DateTime       @default(now())
-  loginAttempts LoginAttempt[]
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  loginMode    LoginMode
+  badgeSecret  String?
+  createdAt    DateTime @default(now())
+
+  sessions     Session[]
+  logs         ExperimentLog[]
 }
 
-model LoginAttempt {
+model Session {
   id        String   @id @default(uuid())
   userId    String
-  origin    String
-  submitted Boolean
+  nonce     String
   createdAt DateTime @default(now())
+
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model ExperimentLog {
+  id                   String   @id @default(uuid())
+  userId               String
+  condition            LoginMode
+  pageType             PageType
+  timeToDecision       Int
+  credentialsSubmitted Boolean
+  confidenceScore      Int?
+  createdAt            DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum LoginMode {
+  traditional
+  mva
+}
+
+enum PageType {
+  real
+  phishing
 }
