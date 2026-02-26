@@ -16,6 +16,8 @@ app.use("/register", require("./routes/register"));
 
 app.use("/login", require("./routes/login"));
 
+app.use("/log", require("./routes/log"));
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
