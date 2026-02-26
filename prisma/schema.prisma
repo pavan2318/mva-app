@@ -7,21 +7,19 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  loginMode    String   // baseline | mva
-  createdAt    DateTime @default(now())
-
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  loginMode     String
+  createdAt     DateTime       @default(now())
   loginAttempts LoginAttempt[]
 }
 
 model LoginAttempt {
   id        String   @id @default(uuid())
   userId    String
-  origin    String   // real | static
+  origin    String
   submitted Boolean
   createdAt DateTime @default(now())
-
   user      User     @relation(fields: [userId], references: [id])
 }
