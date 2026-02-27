@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const prisma = require("../prisma");
 const { createSession } = require("../services/sessionService");
 const { deriveDynamicBadge } = require("../services/badgeService");
+const { recordAttempt, isBlocked } = require("../services/throttleService");
 
 const router = express.Router();
 
@@ -53,8 +54,8 @@ router.post("/complete", async (req, res) => {
   try {
     const { email, password, sessionId } = req.body;
 
-    if (!sessionId) {
-      return res.status(400).json({ error: "Session required" });
+    if (isBlocked(email)) {
+      return res.status(429).json({ error: "Too many login attempts for this account." });
     }
 
     const session = await prisma.session.findUnique({
@@ -62,6 +63,7 @@ router.post("/complete", async (req, res) => {
     });
 
     if (!session) {
+      recordAttempt(email);
       return res.status(400).json({ error: "Invalid session" });
     }
 
@@ -70,25 +72,21 @@ router.post("/complete", async (req, res) => {
     });
 
     if (!user || user.email !== email) {
+      recordAttempt(email);
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
+      recordAttempt(email);  // ← MUST be here
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-	  await prisma.experimentLog.create({
-  data: {
-    userId: user.id,
-    condition: user.loginMode,
-    pageType: "real",
-    timeToDecision: 0, // frontend will overwrite later
-    credentialsSubmitted: true,
-    confidenceScore: null
-  }
-});
+    recordAttempt(email);    // ← Also count successful attempt
+
+    // existing experimentLog auto logging here
+
     res.json({ success: true });
 
   } catch (err) {
