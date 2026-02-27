@@ -14,6 +14,8 @@ app.use("/register", require("./routes/register"));
 app.use("/login", require("./routes/login"));
 app.use("/phish", require("./routes/phish"));
 app.use("/log", require("./routes/log"));
+const adminRoutes = require("./routes/admin");
+app.use("/admin", adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 
