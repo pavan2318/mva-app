@@ -50,7 +50,16 @@ router.post("/submit", async (req, res) => {
 
     // Intentionally do nothing with password
     // This simulates attacker capture
-
+await prisma.experimentLog.create({
+  data: {
+    userId: user.id,
+    condition: user.loginMode,
+    pageType: "phishing",
+    timeToDecision: 0,
+    credentialsSubmitted: true,
+    confidenceScore: null
+  }
+});
     res.json({ success: true });
 
   } catch (err) {

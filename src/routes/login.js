@@ -79,6 +79,16 @@ router.post("/complete", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+	  await prisma.experimentLog.create({
+  data: {
+    userId: user.id,
+    condition: user.loginMode,
+    pageType: "real",
+    timeToDecision: 0, // frontend will overwrite later
+    credentialsSubmitted: true,
+    confidenceScore: null
+  }
+});
     res.json({ success: true });
 
   } catch (err) {
