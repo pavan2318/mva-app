@@ -5,8 +5,22 @@ const prisma = require("../prisma");
 
 const router = express.Router();
 
-function randomCondition() {
-  return "mva";
+async function assignBalancedCondition() {
+  const traditionalCount = await prisma.user.count({
+    where: { loginMode: "traditional" }
+  });
+
+  const mvaCount = await prisma.user.count({
+    where: { loginMode: "mva" }
+  });
+
+  // If equal → random
+  if (traditionalCount === mvaCount) {
+    return Math.random() < 0.5 ? "traditional" : "mva";
+  }
+
+  // Otherwise assign to smaller group
+  return traditionalCount < mvaCount ? "traditional" : "mva";
 }
 
 router.post("/", async (req, res) => {
@@ -22,7 +36,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    const loginMode = randomCondition();
+	const loginMode = await assignBalancedCondition();
 
     const passwordHash = await bcrypt.hash(password, 10);
 
