@@ -58,11 +58,20 @@ router.post("/complete", async (req, res) => {
       return res.status(429).json({ error: "Too many login attempts for this account." });
     }
 
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId }
-    });
+const session = await prisma.session.findUnique({
+  where: { id: sessionId }
+});
 
-    if (!session) {
+if (!session) {
+  recordAttempt(email);
+  return res.status(400).json({ error: "Invalid session" });
+}
+
+if (session.used) {
+  return res.status(400).json({ error: "Session already used" });
+}
+    
+if (!session) {
       recordAttempt(email);
       return res.status(400).json({ error: "Invalid session" });
     }
@@ -70,6 +79,11 @@ router.post("/complete", async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id: session.userId }
     });
+
+await prisma.session.update({
+  where: { id: sessionId },
+  data: { used: true }
+});
 
     if (!user || user.email !== email) {
       recordAttempt(email);
