@@ -24,6 +24,7 @@ model Session {
   userId    String
   nonce     String
   pageType  PageType
+  dynamicBadge Json?
   used      Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())

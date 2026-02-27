@@ -18,13 +18,18 @@ router.post("/start", async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: "User not found" });
 
-    const session = await createSession(user.id, "real");
+const session = await createSession(user.id, "real");
 
-    let badge = null;
-    if (user.loginMode === "mva") {
-      badge = deriveDynamicBadge(user.badgeSecret, session.nonce);
-    }
+let badge = null;
 
+if (user.loginMode === "mva" && user.badgeSecret) {
+  badge = deriveDynamicBadge(user.badgeSecret, session.nonce);
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { dynamicBadge: badge }
+  });
+}
     res.json({
       loginMode: user.loginMode,
       sessionId: session.id,

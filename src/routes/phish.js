@@ -11,12 +11,18 @@ router.post("/start", async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: "User not found" });
 
-    const session = await createSession(user.id, "phishing");
+const session = await createSession(user.id, "phishing");
 
-    let fakeBadge = null;
-    if (user.loginMode === "mva") {
-      fakeBadge = ["🐵", "🐸", "🐔", "🐢"];
-    }
+let fakeBadge = null;
+
+if (user.loginMode === "mva") {
+  fakeBadge = ["🐵", "🐸", "🐔", "🐢"];
+
+  await prisma.session.update({
+    where: { id: session.id },
+    data: { dynamicBadge: fakeBadge }
+  });
+}
 
     res.json({
       loginMode: user.loginMode,
