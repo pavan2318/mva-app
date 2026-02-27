@@ -106,16 +106,17 @@ router.post("/complete", async (req, res) => {
 
     recordAttempt(email);
 
-    await prisma.experimentLog.create({
-      data: {
-        userId: user.id,
-        condition: user.loginMode,
-        pageType: "real",
-        timeToDecision: 0,
-        credentialsSubmitted: true,
-        confidenceScore: null
-      }
-    });
+await prisma.experimentLog.create({
+  data: {
+    userId: user.id,
+    sessionId: session.id,
+    condition: user.loginMode,
+    pageType: "real",
+    timeToDecision: 0,
+    credentialsSubmitted: true,
+    confidenceScore: null
+  }
+});
 
     res.json({ success: true });
 

@@ -28,19 +28,22 @@ model Session {
   createdAt DateTime @default(now())
 
   user      User     @relation(fields: [userId], references: [id])
+  logs ExperimentLog[]
 }
 
 model ExperimentLog {
   id                   String   @id @default(uuid())
   userId               String
-  condition            LoginMode
-  pageType             PageType
+  sessionId            String
+  condition            String
+  pageType             String
   timeToDecision       Int
   credentialsSubmitted Boolean
   confidenceScore      Int?
   createdAt            DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  session Session @relation(fields: [sessionId], references: [id])
 }
 
 enum LoginMode {
