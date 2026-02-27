@@ -36,36 +36,36 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-	const loginMode = await assignBalancedCondition();
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        loginMode
-      }
-    });
-
-    let badgeSecret = null;
+    const loginMode = await assignBalancedCondition();
 
     if (loginMode === "mva") {
       if (!emojis || emojis.length !== 4) {
         return res.status(400).json({ error: "MVA users must select 4 emojis" });
       }
-
-      badgeSecret = deriveBadgeSecret(
-        process.env.MVA_MASTER_KEY,
-        user.id,
-        emojis
-      );
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { badgeSecret }
-      });
     }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const user = await prisma.$transaction(async (tx) => {
+      let badgeSecret = null;
+
+      if (loginMode === "mva") {
+        badgeSecret = deriveBadgeSecret(
+          process.env.MVA_MASTER_KEY,
+          email,
+          emojis
+        );
+      }
+
+      return tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          loginMode,
+          badgeSecret
+        }
+      });
+    });
 
     res.json({
       success: true,

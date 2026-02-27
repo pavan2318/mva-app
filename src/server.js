@@ -44,6 +44,12 @@ app.use("/log", require("./routes/log"));
 const adminRoutes = require("./routes/admin");
 app.use("/admin", adminRoutes);
 
+const { sweepExpiredSessions } = require("./services/timeoutSweeper");
+
+setInterval(() => {
+  sweepExpiredSessions().catch(console.error);
+}, 60 * 1000);
+
 /*
 ------------------------------------------------
 Server

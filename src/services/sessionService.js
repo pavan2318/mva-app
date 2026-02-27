@@ -1,30 +1,19 @@
 const prisma = require("../prisma");
-const { generateNonce } = require("./badgeService");
+const crypto = require("crypto");
 
-/*
-Creates a new session with:
-- random nonce
-- used = false
-- expires in 5 minutes
-*/
+async function createSession(userId, pageType) {
+  const nonce = crypto.randomBytes(16).toString("hex");
 
-async function createSession(userId) {
-  const nonce = generateNonce();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
- const session = await prisma.session.create({
+  return prisma.session.create({
     data: {
       userId,
       nonce,
-      used: false,
+      pageType,
       expiresAt
     }
   });
-
-  return session;
 }
 
-module.exports = {
-  createSession
-};
+module.exports = { createSession };
