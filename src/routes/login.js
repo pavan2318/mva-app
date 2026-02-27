@@ -45,6 +45,7 @@ router.post("/start", async (req, res) => {
   }
 });
 
+
 /*
 STEP 2:
 User submits password
@@ -54,36 +55,36 @@ router.post("/complete", async (req, res) => {
   try {
     const { email, password, sessionId } = req.body;
 
-    if (isBlocked(email)) {
-      return res.status(429).json({ error: "Too many login attempts for this account." });
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session required" });
     }
 
-const session = await prisma.session.findUnique({
-  where: { id: sessionId }
-});
+    if (isBlocked(email)) {
+      return res.status(429).json({
+        error: "Too many login attempts for this account."
+      });
+    }
 
-if (!session) {
-  recordAttempt(email);
-  return res.status(400).json({ error: "Invalid session" });
-}
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId }
+    });
 
-if (session.used) {
-  return res.status(400).json({ error: "Session already used" });
-}
-    
-if (!session) {
+    if (!session) {
       recordAttempt(email);
       return res.status(400).json({ error: "Invalid session" });
+    }
+
+    if (session.used) {
+      return res.status(400).json({ error: "Session already used" });
+    }
+
+    if (new Date() > session.expiresAt) {
+      return res.status(400).json({ error: "Session expired" });
     }
 
     const user = await prisma.user.findUnique({
       where: { id: session.userId }
     });
-
-await prisma.session.update({
-  where: { id: sessionId },
-  data: { used: true }
-});
 
     if (!user || user.email !== email) {
       recordAttempt(email);
@@ -93,13 +94,28 @@ await prisma.session.update({
     const valid = await bcrypt.compare(password, user.passwordHash);
 
     if (!valid) {
-      recordAttempt(email);  // ← MUST be here
+      recordAttempt(email);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    recordAttempt(email);    // ← Also count successful attempt
+    // Mark session as used AFTER successful authentication
+    await prisma.session.update({
+      where: { id: sessionId },
+      data: { used: true }
+    });
 
-    // existing experimentLog auto logging here
+    recordAttempt(email);
+
+    await prisma.experimentLog.create({
+      data: {
+        userId: user.id,
+        condition: user.loginMode,
+        pageType: "real",
+        timeToDecision: 0,
+        credentialsSubmitted: true,
+        confidenceScore: null
+      }
+    });
 
     res.json({ success: true });
 
