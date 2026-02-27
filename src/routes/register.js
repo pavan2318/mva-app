@@ -6,7 +6,7 @@ const prisma = require("../prisma");
 const router = express.Router();
 
 function randomCondition() {
-  return Math.random() < 0.5 ? "traditional" : "mva";
+  return "mva";
 }
 
 router.post("/", async (req, res) => {

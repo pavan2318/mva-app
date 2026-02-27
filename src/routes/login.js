@@ -51,10 +51,25 @@ User submits password
 
 router.post("/complete", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, sessionId } = req.body;
 
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
+    if (!sessionId) {
+      return res.status(400).json({ error: "Session required" });
+    }
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId }
+    });
+
+    if (!session) {
+      return res.status(400).json({ error: "Invalid session" });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId }
+    });
+
+    if (!user || user.email !== email) {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
