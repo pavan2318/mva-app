@@ -4,8 +4,30 @@ export interface LoginStartResponse {
   badge: string[] | null
 }
 
-export async function loginStart(email: string, mode: "real" | "phish") {
-  const endpoint = mode === "real" ? "/login/start" : "/phish/start"
+export interface ApiError {
+  status: number
+  message: string
+}
+
+async function handleResponse(res: Response) {
+  const data = await res.json().catch(() => ({}))
+
+  if (!res.ok) {
+    throw {
+      status: res.status,
+      message: data.error || "Request failed"
+    } as ApiError
+  }
+
+  return data
+}
+
+export async function loginStart(
+  email: string,
+  mode: "real" | "phish"
+): Promise<LoginStartResponse> {
+  const endpoint =
+    mode === "real" ? "/login/start" : "/phish/start"
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -13,9 +35,7 @@ export async function loginStart(email: string, mode: "real" | "phish") {
     body: JSON.stringify({ email })
   })
 
-  if (!res.ok) throw new Error("Login start failed")
-
-  return res.json() as Promise<LoginStartResponse>
+  return handleResponse(res)
 }
 
 export async function loginComplete(
@@ -23,7 +43,8 @@ export async function loginComplete(
   password: string,
   mode: "real" | "phish"
 ) {
-  const endpoint = mode === "real" ? "/login/complete" : "/phish/complete"
+  const endpoint =
+    mode === "real" ? "/login/complete" : "/phish/complete"
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -35,7 +56,5 @@ export async function loginComplete(
     })
   })
 
-  if (!res.ok) throw new Error("Login failed")
-
-  return res.json()
+  return handleResponse(res)
 }

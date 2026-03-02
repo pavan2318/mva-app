@@ -6,11 +6,13 @@ type Stage =
   | "email"
   | "password"
   | "loading"
-  | "round1Complete"
+  | "completed"
+  | "notAvailable"
+  | "locked"
   | "error"
 
-export default function LoginPage() {
-  const mode: "real" = "real"
+export default function Round2LoginPage() {
+  const mode: "phish" = "phish"
 
   const [stage, setStage] = useState<Stage>("email")
   const [email, setEmail] = useState("")
@@ -36,9 +38,15 @@ export default function LoginPage() {
       const apiError = err as ApiError
 
       if (apiError.status === 403) {
-        setStage("round1Complete")
+        if (apiError.message.includes("not yet")) {
+          setStage("notAvailable")
+        } else if (apiError.message.includes("already")) {
+          setStage("completed")
+        } else {
+          setStage("locked")
+        }
       } else {
-        setError(apiError.message || "Unable to start login.")
+        setError(apiError.message || "Unable to start Round 2.")
         setStage("email")
       }
     }
@@ -53,7 +61,7 @@ export default function LoginPage() {
 
     try {
       await loginComplete(sessionId, password, mode)
-      setStage("round1Complete")
+      setStage("completed")
     } catch (err) {
       const apiError = err as ApiError
       setError(apiError.message || "Invalid credentials.")
@@ -121,15 +129,22 @@ export default function LoginPage() {
           <p className="text-center text-gray-500">Processing...</p>
         )}
 
-        {stage === "round1Complete" && (
-          <div className="text-center space-y-4">
-            <p className="text-green-600 font-medium">
-              Thank you for completing Round 1.
-            </p>
-            <p className="text-sm text-gray-600">
-              You will receive access to Round 2 in 48 hours.
-            </p>
-          </div>
+        {stage === "notAvailable" && (
+          <p className="text-center text-yellow-600">
+            Round 2 is not yet available. Please return after 48 hours.
+          </p>
+        )}
+
+        {stage === "completed" && (
+          <p className="text-center text-green-600">
+            Thank you for participating. Please proceed to the questionnaire.
+          </p>
+        )}
+
+        {stage === "locked" && (
+          <p className="text-center text-gray-600">
+            Round 2 access is restricted.
+          </p>
         )}
 
         {error && (
