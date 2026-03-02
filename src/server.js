@@ -1,5 +1,6 @@
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const rateLimit = require("express-rate-limit");
 
 const app = express();
@@ -17,22 +18,21 @@ Rate Limiting
 ------------------------------------------------
 */
 
-// Per-IP limiter for login & phishing routes
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50,                  // 50 requests per IP
+  windowMs: 15 * 60 * 1000,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests. Try again later." }
 });
 
-// IMPORTANT: Apply limiter BEFORE routes
+// Apply limiter BEFORE routes
 app.use("/login", loginLimiter);
 app.use("/phish", loginLimiter);
 
 /*
 ------------------------------------------------
-Routes
+API Routes
 ------------------------------------------------
 */
 
@@ -44,11 +44,29 @@ app.use("/log", require("./routes/log"));
 const adminRoutes = require("./routes/admin");
 app.use("/admin", adminRoutes);
 
+/*
+------------------------------------------------
+Timeout Sweeper
+------------------------------------------------
+*/
+
 const { sweepExpiredSessions } = require("./services/timeoutSweeper");
 
 setInterval(() => {
   sweepExpiredSessions().catch(console.error);
 }, 60 * 1000);
+
+/*
+------------------------------------------------
+Serve Frontend (React Build)
+------------------------------------------------
+*/
+
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
+});
 
 /*
 ------------------------------------------------

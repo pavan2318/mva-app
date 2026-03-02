@@ -3,3 +3,7 @@ node_modules
 prisma/migrations
 
 /src/generated/prisma
+
+node_modules/
+frontend/node_modules/
+frontend/dist/
