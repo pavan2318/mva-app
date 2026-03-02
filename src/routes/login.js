@@ -8,7 +8,7 @@ const { recordAttempt, isBlocked } = require("../services/throttleService");
 const router = express.Router();
 
 /*
-STEP 1
+STEP 1 → LOGIN START
 */
 
 router.post("/start", async (req, res) => {
@@ -18,18 +18,19 @@ router.post("/start", async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: "User not found" });
 
-const session = await createSession(user.id, "real");
+    const session = await createSession(user.id, "real");
 
-let badge = null;
+    let badge = null;
 
-if (user.loginMode === "mva" && user.badgeSecret) {
-  badge = deriveDynamicBadge(user.badgeSecret, session.nonce);
+    if (user.loginMode === "mva" && user.badgeSecret) {
+      badge = deriveDynamicBadge(user.badgeSecret, session.nonce);
 
-  await prisma.session.update({
-    where: { id: session.id },
-    data: { dynamicBadge: badge }
-  });
-}
+      await prisma.session.update({
+        where: { id: session.id },
+        data: { dynamicBadge: badge }
+      });
+    }
+
     res.json({
       loginMode: user.loginMode,
       sessionId: session.id,
@@ -43,50 +44,62 @@ if (user.loginMode === "mva" && user.badgeSecret) {
 });
 
 /*
-STEP 2 → DECISION
+STEP 2 → LOGIN COMPLETE
 */
 
 router.post("/complete", async (req, res) => {
   try {
-    const { email, password, sessionId, timeToDecision, confidenceScore } = req.body;
+    const { password, sessionId, timeToDecision, confidenceScore } = req.body;
 
-    if (!sessionId) return res.status(400).json({ error: "Session required" });
-    if (isBlocked(email)) return res.status(429).json({ error: "Too many login attempts" });
+    if (!sessionId)
+      return res.status(400).json({ error: "Session required" });
 
-    const session = await prisma.session.findUnique({ where: { id: sessionId } });
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId }
+    });
+
     if (!session || session.used || new Date() > session.expiresAt)
       return res.status(400).json({ error: "Invalid or expired session" });
 
-    const user = await prisma.user.findUnique({ where: { id: session.userId } });
-    if (!user || user.email !== email)
+    const user = await prisma.user.findUnique({
+      where: { id: session.userId }
+    });
+
+    if (!user)
       return res.status(400).json({ error: "Invalid credentials" });
 
+    if (isBlocked(user.email))
+      return res.status(429).json({ error: "Too many login attempts" });
+
     const valid = await bcrypt.compare(password, user.passwordHash);
+
     if (!valid) {
-      recordAttempt(email);
+      recordAttempt(user.email);
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-const serverDurationMs = Date.now() - new Date(session.serverPageLoadAt).getTime();
+    const serverDurationMs =
+      Date.now() - new Date(session.serverPageLoadAt).getTime();
 
-await prisma.$transaction([
-  prisma.session.update({
-    where: { id: sessionId },
-    data: { used: true }
-  }),
-  prisma.experimentLog.create({
-    data: {
-      userId: user.id,
-      sessionId: session.id,
-      condition: user.loginMode,
-      pageType: session.pageType,
-      decisionType: "SUBMIT",
-      timeToDecision,
-      confidenceScore,
-      serverDurationMs
-    }
-  })
-]);
+    await prisma.$transaction([
+      prisma.session.update({
+        where: { id: sessionId },
+        data: { used: true }
+      }),
+      prisma.experimentLog.create({
+        data: {
+          userId: user.id,
+          sessionId: session.id,
+          condition: user.loginMode,
+          pageType: session.pageType,
+          decisionType: "SUBMIT",
+          timeToDecision,
+          confidenceScore,
+          serverDurationMs
+        }
+      })
+    ]);
+
     res.json({ success: true });
 
   } catch (err) {
