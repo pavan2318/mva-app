@@ -1,6 +1,5 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const { deriveBadgeSecret } = require("../services/badgeService");
 const prisma = require("../prisma");
 
 const router = express.Router();
@@ -14,12 +13,10 @@ async function assignBalancedCondition() {
     where: { loginMode: "mva" }
   });
 
-  // If equal → random
   if (traditionalCount === mvaCount) {
     return Math.random() < 0.5 ? "traditional" : "mva";
   }
 
-  // Otherwise assign to smaller group
   return traditionalCount < mvaCount ? "traditional" : "mva";
 }
 
@@ -31,7 +28,10 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({
+      where: { email }
+    });
+
     if (existing) {
       return res.status(400).json({ error: "User already exists" });
     }
@@ -46,25 +46,15 @@ router.post("/", async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    const user = await prisma.$transaction(async (tx) => {
-      let badgeSecret = null;
-
-      if (loginMode === "mva") {
-        badgeSecret = deriveBadgeSecret(
-          process.env.MVA_MASTER_KEY,
-          email,
-          emojis
-        );
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        loginMode,
+        selectedEmojis: loginMode === "mva" ? emojis : [],
+        round1CompletedAt: null,
+        round2Completed: false
       }
-
-      return tx.user.create({
-        data: {
-          email,
-          passwordHash,
-          loginMode,
-          badgeSecret
-        }
-      });
     });
 
     res.json({

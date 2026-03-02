@@ -8,46 +8,48 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  loginMode    LoginMode
-  badgeSecret  String?
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  email             String   @unique
+  passwordHash      String
+  createdAt         DateTime @default(now())
 
-  sessions     Session[]
-  logs         ExperimentLog[]
+  loginMode         LoginMode
+  selectedEmojis    String[]
+
+  round1CompletedAt DateTime?
+  round2Completed   Boolean  @default(false)
+
+  sessions          Session[]
+  logs              ExperimentLog[]
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  userId    String
-  nonce     String
-  pageType  PageType
-  dynamicBadge Json?
-  serverPageLoadAt DateTime @default(now())   
-  used      Boolean  @default(false)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id               String   @id @default(uuid())
+  userId           String
+  pageType         PageType
+  serverPageLoadAt DateTime @default(now())
+  used             Boolean  @default(false)
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
 
-  user      User     @relation(fields: [userId], references: [id])
-  log       ExperimentLog?
+  user             User     @relation(fields: [userId], references: [id])
+  log              ExperimentLog?
 }
 
 model ExperimentLog {
-  id              String       @id @default(uuid())
-  userId          String
-  sessionId       String       @unique
-  condition       LoginMode
-  pageType        PageType
-  decisionType    DecisionType
-  timeToDecision  Int?
-  confidenceScore Int?
+  id               String       @id @default(uuid())
+  userId           String
+  sessionId        String       @unique
+  condition        LoginMode
+  pageType         PageType
+  decisionType     DecisionType
+  timeToDecision   Int?
+  confidenceScore  Int?
   serverDurationMs Int?
-  createdAt       DateTime     @default(now())
+  createdAt        DateTime     @default(now())
 
-  user    User    @relation(fields: [userId], references: [id])
-  session Session @relation(fields: [sessionId], references: [id])
+  user             User    @relation(fields: [userId], references: [id])
+  session          Session @relation(fields: [sessionId], references: [id])
 }
 
 enum LoginMode {

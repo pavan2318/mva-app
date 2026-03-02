@@ -2,13 +2,12 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const prisma = require("../prisma");
 const { createSession } = require("../services/sessionService");
-const { deriveDynamicBadge } = require("../services/badgeService");
 const { recordAttempt, isBlocked } = require("../services/throttleService");
 
 const router = express.Router();
 
 /*
-STEP 1 → LOGIN START
+ROUND 1 → LOGIN START
 */
 
 router.post("/start", async (req, res) => {
@@ -18,17 +17,17 @@ router.post("/start", async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ error: "User not found" });
 
+    // Prevent repeating Round 1
+    if (user.round1CompletedAt) {
+      return res.status(403).json({ error: "Round 1 already completed." });
+    }
+
     const session = await createSession(user.id, "real");
 
     let badge = null;
 
-    if (user.loginMode === "mva" && user.badgeSecret) {
-      badge = deriveDynamicBadge(user.badgeSecret, session.nonce);
-
-      await prisma.session.update({
-        where: { id: session.id },
-        data: { dynamicBadge: badge }
-      });
+    if (user.loginMode === "mva" && user.selectedEmojis.length === 4) {
+      badge = user.selectedEmojis;
     }
 
     res.json({
@@ -44,7 +43,7 @@ router.post("/start", async (req, res) => {
 });
 
 /*
-STEP 2 → LOGIN COMPLETE
+ROUND 1 → LOGIN COMPLETE
 */
 
 router.post("/complete", async (req, res) => {
@@ -85,6 +84,12 @@ router.post("/complete", async (req, res) => {
       prisma.session.update({
         where: { id: sessionId },
         data: { used: true }
+      }),
+      prisma.user.update({
+        where: { id: user.id },
+        data: {
+          round1CompletedAt: new Date()
+        }
       }),
       prisma.experimentLog.create({
         data: {
