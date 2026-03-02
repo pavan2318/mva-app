@@ -67,24 +67,26 @@ router.post("/complete", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    await prisma.$transaction([
-      prisma.session.update({
-        where: { id: sessionId },
-        data: { used: true }
-      }),
-      prisma.experimentLog.create({
-        data: {
-          userId: user.id,
-          sessionId: session.id,
-          condition: user.loginMode,
-          pageType: session.pageType,
-          decisionType: "SUBMIT",
-          timeToDecision,
-          confidenceScore
-        }
-      })
-    ]);
+const serverDurationMs = Date.now() - new Date(session.serverPageLoadAt).getTime();
 
+await prisma.$transaction([
+  prisma.session.update({
+    where: { id: sessionId },
+    data: { used: true }
+  }),
+  prisma.experimentLog.create({
+    data: {
+      userId: user.id,
+      sessionId: session.id,
+      condition: user.loginMode,
+      pageType: session.pageType,
+      decisionType: "SUBMIT",
+      timeToDecision,
+      confidenceScore,
+      serverDurationMs
+    }
+  })
+]);
     res.json({ success: true });
 
   } catch (err) {

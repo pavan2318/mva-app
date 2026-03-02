@@ -15,25 +15,29 @@ async function sweepExpiredSessions() {
 
   console.log("Expired sessions found:", expired.length);
 
-  for (const session of expired) {
-    console.log("Finalizing:", session.id);
+for (const session of expired) {
+  console.log("Finalizing:", session.id);
 
-    await prisma.$transaction([
-      prisma.session.update({
-        where: { id: session.id },
-        data: { used: true }
-      }),
-      prisma.experimentLog.create({
-        data: {
-          userId: session.userId,
-          sessionId: session.id,
-          condition: session.user.loginMode,
-          pageType: session.pageType,
-          decisionType: "TIMEOUT"
-        }
-      })
-    ]);
-  }
+  const serverDurationMs =
+    Date.now() - new Date(session.serverPageLoadAt).getTime();
+
+  await prisma.$transaction([
+    prisma.session.update({
+      where: { id: session.id },
+      data: { used: true }
+    }),
+    prisma.experimentLog.create({
+      data: {
+        userId: session.userId,
+        sessionId: session.id,
+        condition: session.user.loginMode,
+        pageType: session.pageType,
+        decisionType: "TIMEOUT",
+        serverDurationMs
+      }
+    })
+  ]);
+}
 }
 
 module.exports = { sweepExpiredSessions };

@@ -25,6 +25,7 @@ model Session {
   nonce     String
   pageType  PageType
   dynamicBadge Json?
+  serverPageLoadAt DateTime @default(now())   
   used      Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
@@ -42,6 +43,7 @@ model ExperimentLog {
   decisionType    DecisionType
   timeToDecision  Int?
   confidenceScore Int?
+  serverDurationMs Int?
   createdAt       DateTime     @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
