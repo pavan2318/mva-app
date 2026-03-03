@@ -1,35 +1,45 @@
-const attempts = new Map();
+const { getRuntimeConfig } = require("./runtimeConfig")
 
-const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const MAX_ATTEMPTS = 10;
+const attempts = new Map()
 
-function recordAttempt(email) {
-  const now = Date.now();
+const WINDOW_MS = 15 * 60 * 1000
+const MAX_ATTEMPTS = 10
+
+async function recordAttempt(email) {
+  const now = Date.now()
 
   if (!attempts.has(email)) {
-    attempts.set(email, []);
+    attempts.set(email, [])
   }
 
-  const timestamps = attempts.get(email);
+  const timestamps = attempts.get(email)
 
-  // Remove old timestamps outside window
-  const filtered = timestamps.filter(ts => now - ts < WINDOW_MS);
+  const filtered = timestamps.filter(
+    (ts) => now - ts < WINDOW_MS
+  )
 
-  filtered.push(now);
+  filtered.push(now)
 
-  attempts.set(email, filtered);
+  attempts.set(email, filtered)
 }
 
-function isBlocked(email) {
-  const now = Date.now();
-  const timestamps = attempts.get(email) || [];
+async function isBlocked(email) {
+  const config = await getRuntimeConfig()
 
-  const filtered = timestamps.filter(ts => now - ts < WINDOW_MS);
+  // Admin disabled throttle
+  if (!config?.throttleEnabled) return false
 
-  return filtered.length >= MAX_ATTEMPTS;
+  const now = Date.now()
+  const timestamps = attempts.get(email) || []
+
+  const filtered = timestamps.filter(
+    (ts) => now - ts < WINDOW_MS
+  )
+
+  return filtered.length >= MAX_ATTEMPTS
 }
 
 module.exports = {
   recordAttempt,
   isBlocked
-};
+}

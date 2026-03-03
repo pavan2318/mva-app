@@ -1,19 +1,22 @@
-const prisma = require("../prisma");
-const crypto = require("crypto");
+const prisma = require("../prisma")
+const { getRuntimeConfig } = require("./runtimeConfig")
 
 async function createSession(userId, pageType) {
-  const nonce = crypto.randomBytes(16).toString("hex");
+  const config = await getRuntimeConfig()
 
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const expiryMinutes = config?.sessionExpiryMinutes || 10
+
+  const expiresAt = new Date(
+    Date.now() + expiryMinutes * 60 * 1000
+  )
 
   return prisma.session.create({
     data: {
       userId,
-      nonce,
       pageType,
       expiresAt
     }
-  });
+  })
 }
 
-module.exports = { createSession };
+module.exports = { createSession }

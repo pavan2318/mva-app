@@ -12,12 +12,19 @@ model User {
   email             String   @unique
   passwordHash      String
   createdAt         DateTime @default(now())
+  name		    String?
 
   loginMode         LoginMode
   selectedEmojis    String[]
 
   round1CompletedAt DateTime?
   round2Completed   Boolean  @default(false)
+
+  noticedSomethingUnusual Boolean?
+  emojiHelpedDecision     Boolean?
+  perceivedAuthenticity   Int?
+
+  conditionOverride LoginMode?   // superadmin override
 
   sessions          Session[]
   logs              ExperimentLog[]
@@ -50,6 +57,76 @@ model ExperimentLog {
 
   user             User    @relation(fields: [userId], references: [id])
   session          Session @relation(fields: [sessionId], references: [id])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime @default(now())
+  lastLoginAt  DateTime?
+
+  sessions     AdminSession[]
+  auditLogs    AdminAuditLog[]
+}
+
+model AdminSession {
+  id        String   @id @default(uuid())
+  adminId   String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  admin     AdminUser @relation(fields: [adminId], references: [id])
+}
+
+model SystemConfig {
+  id              String   @id @default("active")
+  activeVersionId String   @unique
+  activeVersion   SystemConfigVersion @relation(fields: [activeVersionId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model SystemConfigVersion {
+  id                   String   @id @default(uuid())
+  versionNumber        Int
+  round2DelayHours     Float
+  sessionExpiryMinutes Int
+  throttleEnabled      Boolean
+  experimentActive     Boolean
+  allowRetakes         Boolean
+  autoLogTimeout       Boolean
+  phishingBadgeMode    String
+  createdByAdminId     String
+  createdAt            DateTime @default(now())
+
+  systemConfig         SystemConfig?
+}
+
+model RuntimeOverride {
+  id          String   @id @default("runtime")
+  paused      Boolean  @default(false)
+  forceDelay  Float?
+  forceExpiry Int?
+  updatedAt   DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id          String   @id @default(uuid())
+  adminId     String
+  action      String
+  targetType  String
+  targetId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  admin       AdminUser @relation(fields: [adminId], references: [id])
+}
+
+enum AdminRole {
+  ADMIN
+  SUPERADMIN
 }
 
 enum LoginMode {

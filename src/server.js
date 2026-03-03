@@ -44,6 +44,18 @@ app.use("/log", require("./routes/log"));
 const adminRoutes = require("./routes/admin");
 app.use("/admin", adminRoutes);
 
+app.use("/admin/auth", require("./routes/admin/auth"));
+app.use("/admin/dashboard", require("./routes/admin/dashboard"));
+app.use("/admin/config", require("./routes/admin/config"))
+app.use("/admin/logs", require("./routes/admin/logs"))
+app.use("/admin/users", require("./routes/admin/users"))
+app.use("/admin/health", require("./routes/admin/health"))
+app.use("/admin/runtime", require("./routes/admin/runtime"))
+app.use("/admin/audit", require("./routes/admin/audit"))
+app.use("/admin/health", require("./routes/admin/health"))
+app.use("/admin/users", require("./routes/admin/users"))
+app.use("/admin/audit", require("./routes/admin/audit"))
+
 /*
 ------------------------------------------------
 Timeout Sweeper

@@ -1,142 +1,83 @@
 import { useState } from "react"
-import { loginStart, loginComplete } from "../api/auth"
+import { useNavigate } from "react-router-dom"
+import { loginStart } from "../api/auth"
 import type { ApiError } from "../api/auth"
 
-type Stage =
-  | "email"
-  | "password"
-  | "loading"
-  | "round1Complete"
-  | "error"
-
 export default function LoginPage() {
+  const navigate = useNavigate()
   const mode: "real" = "real"
 
-  const [stage, setStage] = useState<Stage>("email")
   const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [loginMode, setLoginMode] = useState<"traditional" | "mva" | null>(null)
-  const [badge, setBadge] = useState<string[] | null>(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleEmailSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setStage("loading")
+    setLoading(true)
 
     try {
       const data = await loginStart(email, mode)
 
-      setSessionId(data.sessionId)
-      setLoginMode(data.loginMode)
-      setBadge(data.badge)
-      setStage("password")
+      // Move to real bank authentication step
+      navigate("/bank/auth", {
+        state: {
+          badge: data.badge,
+          sessionId: data.sessionId,
+          loginMode: data.loginMode
+        }
+      })
+
     } catch (err) {
       const apiError = err as ApiError
 
       if (apiError.status === 403) {
-        setStage("round1Complete")
+        // Round 1 already completed → go to Round 2 flow
+        navigate("/round2")
       } else {
         setError(apiError.message || "Unable to start login.")
-        setStage("email")
+        setLoading(false)
       }
     }
   }
 
-  async function handlePasswordSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!sessionId) return
-
-    setError(null)
-    setStage("loading")
-
-    try {
-      await loginComplete(sessionId, password, mode)
-      setStage("round1Complete")
-    } catch (err) {
-      const apiError = err as ApiError
-      setError(apiError.message || "Invalid credentials.")
-      setStage("password")
-    }
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md p-8 rounded-2xl bg-white shadow-lg border border-gray-200">
+    <div className="min-h-screen flex items-center justify-center bg-neutral-50 px-4">
+      <div className="w-full max-w-md bg-white border border-neutral-200 rounded-md p-8">
 
-        <h1 className="text-2xl font-semibold text-center mb-6">
-          Secure Login
+        <h1 className="text-xl font-semibold text-center mb-6">
+          The Kelvin & West Bank
         </h1>
 
-        {stage === "email" && (
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black outline-none"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-black text-white"
-            >
-              Continue
-            </button>
-          </form>
-        )}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="email"
+            required
+            placeholder="Email address"
+            className="w-full px-4 py-3 border border-neutral-300 rounded-md"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
 
-        {stage === "password" && (
-          <form onSubmit={handlePasswordSubmit} className="space-y-4">
-
-            {loginMode === "mva" && badge?.length === 4 && (
-              <div className="flex justify-center gap-3 text-3xl">
-                {badge.map((emoji, i) => (
-                  <span key={i}>{emoji}</span>
-                ))}
-              </div>
-            )}
-
-            <input
-              type="password"
-              required
-              placeholder="Password"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black outline-none"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-            />
-
-            <button
-              type="submit"
-              className="w-full py-3 rounded-xl bg-black text-white"
-            >
-              Sign In
-            </button>
-          </form>
-        )}
-
-        {stage === "loading" && (
-          <p className="text-center text-gray-500">Processing...</p>
-        )}
-
-        {stage === "round1Complete" && (
-          <div className="text-center space-y-4">
-            <p className="text-green-600 font-medium">
-              Thank you for completing Round 1.
-            </p>
-            <p className="text-sm text-gray-600">
-              You will receive access to Round 2 in 48 hours.
-            </p>
-          </div>
-        )}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 bg-red-700 hover:bg-red-800 text-white rounded-md"
+          >
+            {loading ? "Processing..." : "Continue"}
+          </button>
+        </form>
 
         {error && (
-          <p className="mt-4 text-sm text-red-500 text-center">
+          <p className="mt-4 text-sm text-red-600 text-center">
             {error}
           </p>
         )}
+
+        <div className="mt-6 text-xs text-neutral-500 text-center">
+          Your session is encrypted and protected.
+        </div>
+
       </div>
     </div>
   )
